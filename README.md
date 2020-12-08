@@ -47,7 +47,7 @@ npm init 形成的 package.json
     - 安装好之后webpack的依赖，会在node_moudles中
     - node提供的命令npx：通过npx运行node_moudles中的webpack
 
-### 2.4使用webpack配置文件
+### 2.4 使用webpack配置文件
 webpack需要通过配置文件，进行辅助打包。根据工程需求，配置webpack配置文件。
 - 打包文件
     
@@ -90,3 +90,60 @@ webpack需要通过配置文件，进行辅助打包。根据工程需求，配�
 
 - webpack-cli的作用：可以在命令行里面运行webpack命令。
 
+## 3 核心概念
+### 3.1 loader简介
+loader为webpack提供了打包方案。
+- webpack原生不支持打包非js后缀的文件；txt，png等文件需要打包，所以引入了loader。
+
+- file-loader的打包过程：
+     - 把要打包的文件，打包到dist目录下
+     - 把文件地址返回给require()的变量
+
+```asp
+module: {
+    rules: [{
+        test:/\.jpg/,
+        use:{
+            loader: 'file-loader'
+        }
+    }]
+}
+```
+     
+- vue-loader：可以让webpack识别.vue结尾的文件，进行打包。
+
+### 3.2 loader打包静态资源（图片）
+[file-loader的placeholder](https://v4.webpack.js.org/loaders/file-loader/#placeholders)
+
+url-loader：这样配置，所有的图片都会被打包成base64的形式，存入bundle.js文件
+ - 缺点：当图片很大，js加载很慢，出现白屏
+```asp
+module: {
+    rules: [{
+        test: /\.(jpg|png|gif)$/,
+        use:{
+            loader: 'url-loader',
+            options:{
+                //placeholder,文件名，hash，文件的扩展名
+                name:'[name]_[hash].[ext]' 
+            }
+        }
+    }]
+}
+```
+- 优化：
+```asp
+module: {
+    rules: [{
+        test: /\.(jpg|png|gif)$/,
+        use:{
+            loader: 'url-loader', //对图片类型文件打包
+            options:{
+                name:'[name]_[hash].[ext]', 
+                outputPath: 'images/',  //打包到的文件夹名称和路径
+                limit: 20480 //小于20k文件，按照url-loader进行打包，大于20k的图片，使用file-loader打包，所以也要npm i file-loader
+            }
+        }
+    }]
+}
+```
