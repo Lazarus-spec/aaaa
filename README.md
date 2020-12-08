@@ -147,3 +147,19 @@ module: {
     }]
 }
 ```
+### 3.3 loader打包静态资源（样式上）
+- use打包两个静态资源，需要是数组的形式
+```asp
+{
+    test:/\.scss$/,
+    use: [
+        'style-loader',
+        'css-loader',
+        'sass-loader',
+        'postcss-loader'  //从右向左
+    ]
+}
+```
+sass-loader 识别sass语法，node-sass 如果要使用sass-loader要安装这俩包
+postcss-loader 适配各个浏览器的前缀，需要额外配置postcss.config.js
+autoprefixer 在postcss.config.js引入，简化配置
