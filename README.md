@@ -111,7 +111,6 @@ module: {
 ```
      
 - vue-loader：可以让webpack识别.vue结尾的文件，进行打包。
-
 ### 3.2 loader打包静态资源（图片）
 [file-loader的placeholder](https://v4.webpack.js.org/loaders/file-loader/#placeholders)
 
@@ -147,7 +146,7 @@ module: {
     }]
 }
 ```
-### 3.3 loader打包静态资源（样式上）
+### 3.3 loader打包静态资源（style css scss 在postcss）
 - use打包两个静态资源，需要是数组的形式
 ```asp
 {
@@ -160,6 +159,145 @@ module: {
     ]
 }
 ```
-sass-loader 识别sass语法，node-sass 如果要使用sass-loader要安装这俩包
-postcss-loader 适配各个浏览器的前缀，需要额外配置postcss.config.js
-autoprefixer 在postcss.config.js引入，简化配置
+- sass-loader 识别sass语法，node-sass 如果要使用sass-loader要安装这俩包
+- postcss-loader 适配各个浏览器的前缀，需要额外配置postcss.config.js
+- autoprefixer 在postcss.config.js引入，简化配置
+### 3.4 loader打包静态资源（css-loader配置，字体打包）
+
+1. 样式分模块打包
+
+- 注意：要兼顾css-loader打包顺序
+```asp
+{
+    test:/\.scss$/,
+    use: [
+        'style-loader',
+        {
+            loader: 'css-loader',
+            options: {
+                moudles:true,  // css分模块打包
+                importLoaders:2 // 规定css-loder前面，要运行几个loader
+            }
+        },
+        'sass-loader',
+        'postcss-loader'
+    ]
+}
+```
+
+2. 对字体文件进行打包(使用file-loader，以iconfont举例)
+
+```asp
+{
+    test: /\.(eot|ttf|svg)$/,
+    use:{
+        loader: 'file-loader'
+    }
+}
+```
+### 3.5 plugins: clean-webpack-plugin html-webpack-plugin
+
+1. clean-webpack-plugin（非官方推荐）
+
+    - [clean-webpack-plugin](https://www.cnblogs.com/xiaozhumaopao/p/10792168.html)
+
+    - 为生产环境编译文件的时候，先把 build或dist (就是放生产环境用的文件) 目录里的文件先清除干净，再生成新的
+    
+2. html-webpack-plugin
+
+- 会在打包结束后，生成一个html文件，并把打包生成的js文件引入其中
+
+```asp
+plugins: [
+    new HtmlWebpackPlugin({
+        template: 'src/index.html'  // 要打包的html文件
+    }),
+    new CleanWebpackPlugin(['dist']) // 打包到的文件夹
+],
+output: {
+    filename: 'index.js',
+    path: path.resolve(__dirname, 'dist')
+}
+```
+### 3.6 Entry 与 Output 的基础配置
+
+- 打包生成多个js文件，需要在entry和output中进行配置
+
+```asp
+entry: {
+    main: './src/index.js',
+    main2: './src/index.js'
+},
+output: {
+    // publicPath可以额外配置cdn，这样打包后的js文件，前缀就会加上cdn地址 
+    filename: '[name].js',
+    path: path.resolve(__dirname, 'dist')
+}
+```
+### 3.7 SourceMap 的配置 
+本质上是一种映射关系，把打包前后的js进行映射。打包代码出错的时候，这样可以辅助在控制台，迅速定位错误。
+1. 带source-map，打包后会生成map.js文件
+2. 带inline，打包后的map.js文件，会被base64合并到目标文件
+3. 带cheap，只提示多少行，不提示多少列出错；只对业务代码进行错误提示，打包过程中的错误，不做处理。
+4. 带module，除了业务代码外，打包过程中loader出错也会进行提示和处理。
+5. 带eval，通过eval方式，把对应的业务代码和source-map一起执行，速度快
+
+- inline-source-map
+    - 精确到具体某个位置出错了
+    - 生成的map.js文件，以base64的形式，放在了打包后main.js的底部
+- cheap-inline-source-map
+    - 只需要告诉哪一行出错了，打包的性能得到了提高
+- eval
+    - 打包快，但是提示出来的错误不准确
+
+mode:development线下开发devtool配置：
+```asp
+devtool：'cheap-module-eval-source-map'
+```
+mode:production线上环境devtool配置：
+```asp
+devtool：'cheap-module-source-map'
+```
+
+注意问题：source-map原理，查阅文档自己理解
+### 3.8 WebpackDevServer
+预期实现功能：改动src中源代码，dist自动打包
+
+1.方法一：package.json添加--watch
+```asp
+  "scripts": {
+    "bundle": "webpack",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server",
+    "server": "node server.js"
+  }
+```
+
+2.方法二：WebpackDevServer
+ - 不但能监听文件的改变，还能自动刷新浏览器
+ - WebpackDevServer还可以开启一个本地服务器，用于发起http请求（直接打开index.html使用的是ftp协议，无法向服务器发送请求）
+```asp
+  "scripts": {
+    "bundle": "webpack",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server"
+  }
+```
+- 注意：webpack dev server把编译的内容放在内存，而contentBase会作为硬盘上的文件的搜索路径，webpack dev server会首先去contentBase上搜索文件，没有再到内存查找
+```asp
+devServer:{
+  contentBase:'./dist', //服务器根路径
+    open:true   //加载完成直接打开浏览器
+}
+```
+- WebpackDevServer，例如port，proxy等
+
+3.方法三：node，express，webpackDevMiddleware手写一个server
+```asp
+ "scripts": {
+    "bundle": "webpack",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server",
+    "middleware": "node server.js"
+  },
+```
