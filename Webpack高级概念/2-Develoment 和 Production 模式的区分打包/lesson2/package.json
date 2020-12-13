@@ -5,8 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "webpack-dev-server --config ./webpack.dev.js",
-    "build": "webpack --config ./webpack.prod.js"
+    "start": "webpack-dev-server",
+    "dev": "webpack-dev-server --config ./build/webpack.dev.js",
+    "prd": "webpack --config ./build/webpack.prod.js"
   },
   "author": "",
   "license": "ISC",
@@ -30,7 +31,7 @@
     "webpack-cli": "^3.1.2",
     "webpack-dev-middleware": "^3.4.0",
     "webpack-dev-server": "^3.1.10",
-    "webpack-merge": "^4.1.5"
+    "webpack-merge": "^4.0.0"
   },
   "dependencies": {
     "@babel/polyfill": "^7.0.0",

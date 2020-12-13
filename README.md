@@ -309,7 +309,7 @@ devServer:{
 [Devtool]('https://v4.webpack.js.org/configuration/devtool/')
 、[DevServer]('https://v4.webpack.js.org/configuration/dev-server/')
 
-### 3.9 Hot Module Replacement 热模块更新
+### 3.9 Hot Module Replacement 热模块更新HMR
 目标：
 1. 改动的HTML中数据生效，也不重新刷新
 2. 改动css样式，也不重新刷新
@@ -390,3 +390,14 @@ optimization: {
 
 目的：解决开发和线上环境配置修改不方便问题
 
+生产环境：打包好文件，上传到服务器就可以了
+
+- 在pk.json文件中对两种环境进行不同的配置
+- 共有的文件可以放在webpack.common.js
+
+安装第三方模块，对common.js和另外两个文件合成
+
+有些框架，会把三个文件放在在build文件夹下
+
+- 附：端口占用解决
+    - Error: listen EADDRINUSE 127.0.0.1:8080（8080端口被占用）
