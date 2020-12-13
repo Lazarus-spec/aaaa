@@ -51,7 +51,7 @@ npm init 形成的 package.json
 webpack需要通过配置文件，进行辅助打包。根据工程需求，配置webpack配置文件。
 - 打包文件
     
-    默认配置文件名称：webpack.config.js
+    默认配置文件名称：webpack.dev.js
     
     打包命令：npx webpack
     
@@ -283,7 +283,7 @@ devtool：'cheap-module-source-map'
     "start": "webpack-dev-server"
   }
 ```
-- 注意：webpack dev server把编译的内容放在内存，而contentBase会作为硬盘上的文件的搜索路径，webpack dev server会首先去contentBase上搜索文件，没有再到内存查找
+- 注意：webpack dev server把编译的内容放在内存(提高打包速度)，而contentBase会作为硬盘上的文件的搜索路径，webpack dev server会首先去contentBase上搜索文件，没有再到内存查找
 ```asp
 devServer:{
   contentBase:'./dist', //服务器根路径
@@ -301,3 +301,92 @@ devServer:{
     "middleware": "node server.js"
   },
 ```
+
+向导：
+[Development]('https://v4.webpack.js.org/guides/development/#using-source-maps')
+
+配置：
+[Devtool]('https://v4.webpack.js.org/configuration/devtool/')
+、[DevServer]('https://v4.webpack.js.org/configuration/dev-server/')
+
+### 3.9 Hot Module Replacement 热模块更新
+目标：
+1. 改动的HTML中数据生效，也不重新刷新
+2. 改动css样式，也不重新刷新
+3. 改动不同模块的代码，相互不影响
+- 如果项目中css文件做了修改，不会重新加载页面，只对css进行改动，方便调试
+```asp
+devServer: {
+    contentBase: './dist',
+    open: true,
+    port: 8080,
+    hot: true,
+    hotOnly: true  //false：改动的HTML失效，重新刷新页面； true：不做处理；
+}
+```
+
+```asp
+const webpack = require('webpack');
+plugins: [
+    new HtmlWebpackPlugin({
+        template: 'src/index.html'
+    }), 
+    new CleanWebpackPlugin(['dist']),
+    new webpack.HotModuleReplacementPlugin()  //wp自带的插件，先引入wp，就可以使用了
+]
+```
+### 3.10 Babel
+1.babel和wp的结合
+- [babel和wp的结合]('https://www.babeljs.cn/setup#installation')
+
+2.介绍
+- babel-loader是把babel和wp关联起来的
+- @babel/preset-env 是把ES6转成ES5的（语法转换）
+- @babel/polyfill函数和变量在低版本浏览器的补充
+
+```asp
+{
+    test:/\.js$/,
+    exclude:/node_modules/,
+    loader:"babel-loader",
+    options:{
+        presets: [["@babel/preset-env",{
+            useBuiltIns:"usage"   //ES6语法转换的懒加载，不会一次把ES6所有转换规则都加载到浏览器，而是按需加载
+        }]]
+    }
+}
+```
+ Chrome67版本以上的不进行babel处理
+```asp
+options:{
+    presets: [["@babel/preset-env",{
+        targets:{chrome:"67",edge:"17"},
+        useBuiltIns:"usage"
+    }]]
+}
+```
+3.在写库代码的时候需要配置
+- polyfill污染全局环境
+- 以闭包方式引入，不污染全局环境
+
+## 4 高级概念
+### Tree Shaking 概念
+
+解决的问题:一个模块有很多内容，只打包引入的内容，不打包其他内容
+
+- 只支持ES Module引入，不支持CommonJS底层是静态引入
+
+配置：
+
+1.wp.cfg.js配置
+```asp
+optimization: {
+    usedExports: true
+}
+```
+2.pk.json配置[sideEffects]('https://www.cnblogs.com/wzcsqaws/p/11571945.html')（不需要tree shaking的情况）
+
+### Develoment 和 Production 模式的区分打包
+
+目的：解决开发和线上环境配置修改不方便问题
+
