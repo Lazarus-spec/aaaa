@@ -370,7 +370,7 @@ options:{
 - 以闭包方式引入，不污染全局环境
 
 ## 4 高级概念
-### Tree Shaking 概念
+### 4.1Tree Shaking 概念
 
 解决的问题:一个模块有很多内容，只打包引入的内容，不打包其他内容
 
@@ -386,7 +386,7 @@ optimization: {
 ```
 2.pk.json配置[sideEffects]('https://www.cnblogs.com/wzcsqaws/p/11571945.html')（不需要tree shaking的情况）
 
-### Develoment 和 Production 模式的区分打包
+### 4.2Develoment 和 Production 模式的区分打包
 
 目的：解决开发和线上环境配置修改不方便问题
 
@@ -397,7 +397,323 @@ optimization: {
 
 安装第三方模块，对common.js和另外两个文件合成
 
-有些框架，会把三个文件放在在build文件夹下
+有些框架，会把三个文件放在在build文件夹下，要对应修改pk.json命令
+```asp
+  "scripts": {
+    "dev": "webpack-dev-server --config ./webpack.dev.js",
+    "build": "webpack --config ./webpack.prod.js"
+  },
+```
 
 - 附：端口占用解决
     - Error: listen EADDRINUSE 127.0.0.1:8080（8080端口被占用）
+
+### 4.3Webpack 和 Code Splitting
+
+目的：打包后的dist文件夹不在bundle中
+
+配置：
+```asp
+new CleanWebpackPlugin(['dist'],{        //删除lesson中的dist 
+    root:path.resolve(__dirname,'../')  //修改路径
+})
+```
+```asp
+output: {
+    filename: '[name].js',
+    path: path.resolve(__dirname, '../dist')
+}
+```
+
+注意：遇到打包问题解决方法
+1. 控制台找到问题
+2. 问题搜索和提问
+3. 文档配置说明，修改对应的配置文件
+
+Code Splitting要解决的问题：
+1. 业务逻辑会进行改变，每次打包时间很长
+2. 浏览器运行程序，首先会下载第三方库，还会下载相关的业务代码，加载会很慢
+
+解决：
+- 自己配置lesson2
+    - 用户同时加载两个文件，速度可能更快一些
+```asp
+entry: {
+    lodash: './src/lodash.js',  //这里要把lodash放在前面
+    main: './src/index.js'
+},
+```
+- wp自带实现
+法一：同步配置——wp自带配置项进行配置lesson3
+```asp
+    optimization: {
+        splitChunks:{
+            chunks:'all'
+        }
+    }
+```
+法二：异步配置——异步加载进行配置lesson4
+1. 配置babelrc
+2. pk.json安装 npm babel-plugin-dynamic-import-webpack --save-dev
+```asp
+{
+  presets: [
+    [
+      "@babel/preset-env", {
+      targets: {
+        chrome: "67",
+      },
+      useBuiltIns: 'usage'
+    }
+    ],
+    "@babel/preset-react"
+  ],
+  plugins: ["@babel/plugin-syntax-dynamic-import"]
+}
+```
+
+
+### 4.4SplitChunksPlugin 配置参数
+
+- 异步
+    - @babel/plugin-syntax-dynamic-import
+
+### 4.5LazyLoading-Chunk
+- 懒加载：
+     - 通过封装import写成的懒加载函数，使click时才执行
+
+- 代码分割
+ ```asp
+optimization: {
+    splitChunks: {
+     chunks: 'all'
+    }
+},
+```
+
+[代码分割介绍]('https://blog.csdn.net/yunchong_zhao/article/details/108217759')
+
+### 4.6 打包分析
+- [打包分析]('https://github.com/webpack/analyse')
+
+```asp
+添加打包描述文件：webpack --profile --json > stats.json
+打包后会生成一个json描述文件
+
+"scripts": {
+    "dev-build": "webpack --config  webpack --profile --json > stats.json ./build/webpack.dev.js",
+    "dev": "webpack-dev-server --config ./build/webpack.dev.js",
+    "build": "webpack --config ./build/webpack.prod.js"
+ }
+
+```
+
+    - 一个可以分析打包的插件    webpack-bundle-analyzer
+    
+ - 代码使用率
+    - [Chrome性能分析工具Coverage使用方法]('https://www.cnblogs.com/zhaoweikai/p/9664482.html')
+    - [ webpackPrefetch和webpackPreload]('https://v4.webpack.js.org/guides/code-splitting/#prefetchingpreloading-modules')
+        - 代码覆盖率角度做前端性能优化
+        - webpackPrefetch：业务代码加载完成之后，进行懒加载
+        - webpackPreload：和业务代码同步加载
+
+### 4.7 css代码分割
+
+- mini-css-extract-plugin
+     - 不支持热更新，一般生产环境使用
+
+- optimize-css-assets-webpack-plugin
+    - css代码压缩
+
+### 4.8　浏览器缓存
+在出口文件做更新
+```asp
+output: {
+		filename: '[name].[contenthash].js',    打包文件有更新，只在客户浏览器重新下载变更文件。
+		chunkFilename: '[name].[contenthash].js'
+	}
+```
+新版本wp4可以在optimization中配置runtimeChunk，生成runtime.js文件关联各个库和业务代码（处理库和业务的关系）
+
+### 4.9 Shimming
+common.js配置ProvidePlugin
+```asp
+const webpack = require('webpack');
+plugins: [
+    new webpack.ProvidePlugin({
+        $: 'jquery',   //目录中含有$就引入jq库
+        _join: ['lodash', 'join']
+    }),
+],
+```
+
+```asp
+rules: [{ 
+			test: /\.js$/, 
+			exclude: /node_modules/,
+			use: [{
+				loader: 'babel-loader'
+			}, {
+				loader: 'imports-loader?this=>window'   //模块自己的this指向window
+			}]
+		}]
+```
+
+### 4.10-环境变量
+根据不同环境进行打包的另一种方法
+```asp
+common.js
+// 全局变量ENV来决定配置文件
+module.exports = (env)=>{
+    if (env && env.production){
+        // 如果是生产环境
+        return merge(commonConfig,prodConfig)
+    }else {
+        // 如果是开发环境
+        return merge(commonConfig,devConfig)
+    }
+}
+```
+```asp
+  "scripts": {
+    "dev-build": "webpack --config ./build/webpack.common.js",
+    "dev": "webpack-dev-server --config ./build/webpack.common.js",   //不用传全局变量
+    "build": "webpack --env.production --config ./build/webpack.common.js"  //传递全局变量env.production
+  },
+```
+
+# webpack实战
+###　5-1打包库
+对于自定义的库进行打包，给外部使用
+ - 不同规范、不同方式去引入
+ - wp配置
+ 
+依赖库
+  - lodash，配置externals
+ 
+上传到npm
+ 
+### 5-4wpdevserver实现请求转发
+--> Config - devSServer.Proxy配置
+ - 开发环境的前缀配置处理
+ ```
+proxy: {  //是基于http-proxy-middleware的
+    '/react/api': {     // 请求代理
+        target: 'http://www.dell-lee.com',  
+        secure: false,   // 实现对https网址请求转发
+        pathRewrite: {   //路径重写
+            // 'header.json': 'demo.json'    //请求header.json的时候，改成请求demo.json
+        },
+        // bypass 做请求拦截
+        changeOrigin: true, // 处理请求的服务器origin问题
+        headers: {  // 变更请求头
+            host: 'www.dell-lee.com',
+            cookie:'content' //可以模拟cookie
+        }
+    }
+}
+ ```
+
+注意：
+- 如果相对根路径进行请求转发，需要在devServer下面配置index:''
+- 代理失效（服务器对Origin进行了限制）：proxy中配置changeOrigin:true
+
+### 5-5解决单页面路由问题
+
+- 安装router插件，配置devServer
+ ```
+devServer: {
+   historyApiFallback:true   //可以配置布尔类型值，也可以配置规则
+  
+}
+ ```
+true等价于访问任何路径都转到index.html，转换为对根路径的请求，一般不修改此项
+ ```
+ historyApiFallback: {
+    rewrites: [
+        {
+            from:/\.*\/,   // 访问abc.html的时候，转为访问index.html
+            to:'/index.html'
+        }
+    ]
+},
+
+ ```
+
+### 5-6eslint在wp的配置(这里不学习，移步eslint专门学习)
+1.是代码约束工具
+
+2.怎么去做
+  - 安装eslint
+  - 初始化
+    ```
+    npx eslint --init
+    ```
+    
+3.使用方式
+ - 安装eslint
+ - 安装eslint-loader
+ - 配置devServer里面的overlay
+ - 配置eslint-loader
+
+### 5-8性能优化
+1.跟进技术迭代：Node Npm Yarn
+    - 在项目中使用比较新的版本
+    
+2.尽可能少的模块上使用loader
+     - 具体情况具体分析
+
+3.plugin尽可能精简，并确保可靠
+
+4.resolve参数合理配置
+    - extensions是从左到右匹配的，更多用来配置逻辑性文件（css js等），不用来配置资源类文件（img等）
+    - mainFiles默认寻找文件次序
+    - alias路径别名配置，不要配置过多的扩展名
+
+5.DllPlugin提高webpack打包速度
+    - 实现第三方模块只打包一次
+        - 第三方模块打包一次
+        - 引入三方模块要使用dll文件引入
+    
+6.控制包大小
+    - splitChunksPlugin等
+    
+7.thread-loader,parallel-webpack,happy-webpack打包
+
+8.合理使用sourceMap
+
+9.结合stats分析打包结果
+
+10.开打环境内存编译
+    - 开发中编译生成的文件放在内存中
+    
+11.开发环境中，无用插件剔除
+    
+    
+### 5-11多页面应用打包
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
